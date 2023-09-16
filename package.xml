@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>wili_http</name>
+  <name>wili_sock</name>
   <version>0.0.0</version>
-  <description>Flask application for WILI(Where Is Lost Item)</description>
+  <description>socket server for WILI(Where Is Lost Item)</description>
   <maintainer email="marukazemaru0@gmail.com">Shinagawa Kazemaru</maintainer>
   <license>MIT</license>
 

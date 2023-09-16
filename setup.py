@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'wili_http'
+package_name = 'wili_sock'
 
 setup(
     name=package_name,
@@ -15,11 +15,12 @@ setup(
     zip_safe=True,
     maintainer='Shinagawa Kazemaru',
     maintainer_email='marukazemaru0@gmail.com',
-    description='Flask application for WILI(Where Is Lost Item)',
+    description='socket server for WILI(Where Is Lost Item)',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'sock_srv_converter = wili_sock.sock_srv_converter:main'
         ],
     },
 )
