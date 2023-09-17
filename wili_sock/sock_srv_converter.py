@@ -8,6 +8,7 @@ from threading import Thread
 class SockSrvConverter(Node):
     def __init__(self, sock_file_path:str, listen_num=1):
         super().__init__("sock_srv_converter")
+        self.logger = self.get_logger()
         self.sock_file_path = sock_file_path
         self.listen_num = listen_num
         self.sock = socket.socket( \
@@ -30,24 +31,39 @@ class SockSrvConverter(Node):
         except:
             pass
 
-    def serve_loop(self, connection, address):
+    def serve_loop(self, connection:socket.socket):
         while True:
             try:
-                sock_recv = connection.recv(self.__buffer).decode('utf-8')
-                sock_resp = "res:req=" + sock_recv
-                connection.send(sock_resp.encode('utf-8'))
-            except ConnectionResetError:
-                break
+                req = connection.recv(1024).decode('utf-8')
+                res = "res:req=" + req
+                connection.send(res.encode('utf-8'))
             except BrokenPipeError:
+                break
+            except Exception as e:
+                print("{} in serve_loop".format(e))
                 break
 
     def accept(self):
-        for i in range(self.listen_num):
-            conn, addr = self.sock.accept()
-            Thread(target=self.serve_loop, args=(conn,addr))
+        while True:
+            try:
+                conn, addr = self.sock.accept()
+                self.logger.info("conn {}".format(conn))
+                Thread(target=self.serve_loop, args=(conn,)).start()
+            except KeyboardInterrupt: break
+            except Exception as e:
+                print("<{}> in accept".format(e))
+                break
+
+
+def main():
+    rclpy.init()
+    node = SockSrvConverter("/tmp/sock.sock")
+    Thread(target=node.accept).start()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt: pass
+    node.close()
 
 
 if __name__ == "__main__":
-    node = SockSrvConverter()
-    Thread(target=rclpy.spin, args=(node,))
-    node.accept()
+    main()
