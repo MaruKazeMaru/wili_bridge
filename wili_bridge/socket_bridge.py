@@ -5,9 +5,9 @@ from rclpy.node import Node
 from wili_msgs.msg import TrProbMat
 from threading import Thread
 
-class SockSrvConverter(Node):
+class SocketBridge(Node):
     def __init__(self, sock_file_path:str, listen_num=1):
-        super().__init__("sock_srv_converter")
+        super().__init__("socket_bridge")
         self.logger = self.get_logger()
         self.sock_file_path = sock_file_path
         self.listen_num = listen_num
@@ -57,7 +57,7 @@ class SockSrvConverter(Node):
 
 def main():
     rclpy.init()
-    node = SockSrvConverter("/tmp/sock.sock")
+    node = SocketBridge("/tmp/sock.sock")
     Thread(target=node.accept).start()
     try:
         rclpy.spin(node)
