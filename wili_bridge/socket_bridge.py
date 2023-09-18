@@ -2,7 +2,8 @@ import os
 import socket
 import rclpy
 from rclpy.node import Node
-from wili_msgs.msg import TrProbMat
+from wili_msgs.msg import HMM
+from wili_msgs.srv import GetHMM
 from threading import Thread
 
 class SocketBridge(Node):
@@ -18,6 +19,10 @@ class SocketBridge(Node):
         )
         self.sock.bind(sock_file_path)
         self.sock.listen(listen_num)
+        self.tr_prob_mat = None
+        self.avr_where_user = None
+        self.var_where_user = None
+        self.floor_where_user = None
 
     def __del__(self):
         self.close()
@@ -54,12 +59,19 @@ class SocketBridge(Node):
                 print("<{}> in accept".format(e))
                 break
 
+    def get_response(self, req:bytes) -> bytes:
+        if req == b'0':
+            return
+        else:
+            return bytes(0)
+
 
 def main():
     rclpy.init()
     node = SocketBridge("/tmp/sock.sock")
     Thread(target=node.accept).start()
     try:
+        node.logger.info("start")
         rclpy.spin(node)
     except KeyboardInterrupt: pass
     node.close()
