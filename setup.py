@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 from glob import glob
 import os
 
-package_name = 'wili_sock'
+package_name = 'wili_bridge'
 
 setup(
     name=package_name,
@@ -18,12 +18,12 @@ setup(
     zip_safe=True,
     maintainer='Shinagawa Kazemaru',
     maintainer_email='marukazemaru0@gmail.com',
-    description='socket server for WILI(Where Is Lost Item)',
+    description='socket server for WiLI(Where is Lost Item)',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'sock_srv_converter = wili_sock.sock_srv_converter:main'
+            'socket_bridge = wili_bridge.socket_bridge:main'
         ],
     },
 )
