@@ -5,6 +5,7 @@ from rclpy.node import Node
 from wili_msgs.msg import HMM
 from wili_msgs.srv import GetHMM
 from threading import Thread
+import struct
 
 class SocketBridge(Node):
     def __init__(self, sock_file_path:str, listen_num=1):
@@ -19,34 +20,61 @@ class SocketBridge(Node):
         )
         self.sock.bind(sock_file_path)
         self.sock.listen(listen_num)
-        self.tr_prob_mat = None
-        self.avr_where_user = None
-        self.var_where_user = None
-        self.floor_where_user = None
+
+        self.req_tr_prob = int.to_bytes(0, 1, 'little')
+
+        self.motion_num_i = 0
+        self.motion_num_b = self.motion_num_i.to_bytes(1, 'little', signed=False)
+        self.tr_prob_b:bytes = None
+        # self.avr_where_user_b:bytes = None
+        # self.var_where_user_b:bytes = None
+        # self.floor_where_user_b:bytes = None
+
+        self.cli_get_hmm = self.create_client(GetHMM, 'get_hmm')
+        while not self.cli_get_hmm.service_is_ready(): pass
+        self.update_hmm_param(self.cli_get_hmm.call(GetHMM.Request()).hmm) #ここらへんで処理止まる。。。
+
 
     def __del__(self):
-        self.close()
+        self.destroy_node()
 
-    def close(self):
+
+    def destroy_node(self):
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
             self.sock.close()
             if os.path.exists(self.sock_file_path):
                 os.remove(self.sock_file_path)
-        except:
-            pass
+            super().destroy_node()
+        except: pass
+
+
+    def update_hmm_param(self, hmm:HMM):
+        n = hmm.motion_num
+        self.motion_num_i = n
+        self.motion_num_b = n.to_bytes(1, 'little', signed=False)
+        fmt = 'f' * (n * n)
+        self.tr_prob_b = struct.pack('<' + fmt, *(hmm.tr_prob))
+        # fmt = 'f' * n
+        # self.floor_where_user_b = struct.pack('<' + fmt, *(hmm.floor_where_user))
+        # fmt = 'f' * (n * 2)
+        # self.avr_where_user_b = struct.pack('<' + fmt, *(hmm.avr_where_user))
+        # fmt = 'f' * (n * 3)
+        # self.var_where_user_b = struct.pack('<' + fmt, *(hmm.var_where_user))
+
 
     def serve_loop(self, connection:socket.socket):
         while True:
             try:
-                req = connection.recv(1024).decode('utf-8')
-                res = "res:req=" + req
-                connection.send(res.encode('utf-8'))
+                req = connection.recv(1024)
+                res = self.get_response(req)
+                connection.send(res)
             except BrokenPipeError:
                 break
             except Exception as e:
                 print("{} in serve_loop".format(e))
                 break
+
 
     def accept(self):
         while True:
@@ -59,11 +87,12 @@ class SocketBridge(Node):
                 print("<{}> in accept".format(e))
                 break
 
+
     def get_response(self, req:bytes) -> bytes:
-        if req == b'0':
-            return
+        if req == self.req_tr_prob:
+            return self.motion_num_b + self.tr_prob_b
         else:
-            return bytes(0)
+            return int.to_bytes(0, 1, 'little')
 
 
 def main():
@@ -74,7 +103,8 @@ def main():
         node.logger.info("start")
         rclpy.spin(node)
     except KeyboardInterrupt: pass
-    node.close()
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":
