@@ -31,8 +31,6 @@ class SocketBridge(Node):
         # self.floor_where_user_b:bytes = None
 
         self.cli_get_hmm = self.create_client(GetHMM, 'get_hmm')
-        while not self.cli_get_hmm.service_is_ready(): pass
-        self.update_hmm_param(self.cli_get_hmm.call(GetHMM.Request()).hmm) #ここらへんで処理止まる。。。
 
 
     def __del__(self):
@@ -63,6 +61,16 @@ class SocketBridge(Node):
         # self.var_where_user_b = struct.pack('<' + fmt, *(hmm.var_where_user))
 
 
+    def init_hmm_param(self):
+        self.cli_get_hmm.wait_for_service()
+        future = self.cli_get_hmm.call_async(GetHMM.Request())
+        while rclpy.ok():
+            rclpy.spin_once(self)
+            if future.done():
+                break
+        self.update_hmm_param(future.result().hmm)
+
+
     def serve_loop(self, connection:socket.socket):
         while True:
             try:
@@ -90,7 +98,10 @@ class SocketBridge(Node):
 
     def get_response(self, req:bytes) -> bytes:
         if req == self.req_tr_prob:
-            return self.motion_num_b + self.tr_prob_b
+            if self.motion_num_i == 0:
+                return self.motion_num_b
+            else:
+                return self.motion_num_b + self.tr_prob_b
         else:
             return int.to_bytes(0, 1, 'little')
 
@@ -100,11 +111,12 @@ def main():
     node = SocketBridge("/tmp/sock.sock")
     Thread(target=node.accept).start()
     try:
+        node.init_hmm_param()
         node.logger.info("start")
         rclpy.spin(node)
-    except KeyboardInterrupt: pass
+    except KeyboardInterrupt: print('')
     node.destroy_node()
-    rclpy.shutdown()
+    rclpy.try_shutdown()
 
 
 if __name__ == "__main__":
